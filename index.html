@@ -1,0 +1,411 @@
+import React, { useState, useMemo, useRef } from 'react';
+import { 
+  Search, 
+  Copy, 
+  Check, 
+  Sparkles, 
+  Tag, 
+  Zap, 
+  LayoutGrid, 
+  X,
+  Share2,
+  ThumbsUp,
+  Monitor,
+  Palette,
+  Camera,
+  MessageSquare,
+  Briefcase,
+  Shield,
+  Upload,
+  Image as ImageIcon,
+  Lock,
+  Unlock
+} from 'lucide-react';
+
+// --- Data ---
+
+const INITIAL_PROMPTS = [
+  {
+    id: "professional-portrait-edit-v2",
+    title: "Professional Portrait Edit",
+    prompt: "Transform this photo into a professional headshot with soft studio lighting, clean background, natural skin retouching, sharp facial details, DSLR quality look.",
+    category: "Photo Editing",
+    categorySlug: "photo-editing",
+    isHot: true,
+    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80",
+    usageTips: [
+      "Use a high-quality source image for best results",
+      "Specify background color preference (white, gray, gradient)",
+      "Works great with natural lighting photos",
+      "Add 'corporate style' for formal business portraits"
+    ],
+    bestFor: ["LinkedIn profiles", "Corporate headshots", "Portfolio photos", "Resume images"],
+    aiTools: ["Midjourney", "DALL-E 3", "Adobe Firefly", "Stable Diffusion"]
+  },
+  {
+    id: "viral-instagram-caption",
+    title: "Viral Instagram Caption",
+    prompt: "Write a captivating Instagram caption for [topic] that includes a hook in the first line, storytelling element, call-to-action, and 5 relevant hashtags. Keep it engaging and authentic. Start with an attention-grabbing statement or question, share a personal insight or story in 2-3 lines, end with a question to boost engagement, and add trending + niche hashtags.",
+    category: "Social Media",
+    categorySlug: "social-media",
+    isHot: true,
+    usageTips: [
+      "Replace [topic] with your specific niche or content theme",
+      "Add your brand voice description for more personalized results",
+      "Specify your target audience for better engagement hooks",
+      "Mention if you want emojis or a specific tone (funny, inspirational, etc.)"
+    ],
+    bestFor: ["Instagram influencers", "Brand accounts", "Personal blogs", "Business pages"],
+    aiTools: ["ChatGPT", "Claude", "Gemini", "Copy.ai"]
+  },
+  {
+    id: "diwali-greeting-design",
+    title: "Diwali Greeting Design",
+    prompt: "Create a beautiful Diwali greeting card with traditional diyas, rangoli patterns, warm golden lighting, and festive decorations. Include space for custom text in elegant Hindi/English typography. Use rich colors like deep orange, gold, maroon, and purple. Add sparkles, lanterns, and traditional motifs. The design should be modern yet culturally authentic.",
+    category: "Festival",
+    categorySlug: "festival",
+    isHot: false,
+    usageTips: [
+      "Specify the aspect ratio you need (square for Instagram, portrait for stories)",
+      "Add your brand colors if this is for business use",
+      "Mention 'minimal text area' if you want to add your own text later",
+      "Request 'print-ready' if you plan to print the design"
+    ],
+    bestFor: ["WhatsApp greetings", "Social media posts", "Email newsletters", "Printed cards"],
+    aiTools: ["Midjourney", "DALL-E 3", "Canva AI", "Adobe Firefly"]
+  },
+  {
+    id: "ai-art-generator",
+    title: "AI Art Generator",
+    prompt: "Generate a stunning digital artwork in [style] featuring [subject]. Use vibrant colors, dynamic composition, and add magical lighting effects. Make it suitable for social media sharing. The artwork should have high contrast, interesting perspective, and professional quality that could be used as phone wallpaper or poster print.",
+    category: "Trending AI",
+    categorySlug: "trending-ai",
+    isHot: true,
+    usageTips: [
+      "Replace [style] with specific art styles: cyberpunk, watercolor, anime, oil painting",
+      "Replace [subject] with detailed description of what you want",
+      "Add aspect ratio requirements (16:9 for desktop, 9:16 for mobile)",
+      "Include negative prompts to avoid unwanted elements"
+    ],
+    bestFor: ["Social media content", "Phone wallpapers", "Art prints", "NFT creation"],
+    aiTools: ["Midjourney", "Stable Diffusion", "Leonardo AI", "DALL-E 3"]
+  },
+  {
+    id: "product-photography",
+    title: "Product Photography",
+    prompt: "Create a professional product photo of [item] with clean white background, soft shadows, and studio-quality lighting. Make it ready for e-commerce listing with attention to details. The product should be the clear focus, well-lit from multiple angles, with no distracting elements. Ensure the colors are accurate and the image looks premium.",
+    category: "Photo Editing",
+    categorySlug: "photo-editing",
+    isHot: false,
+    usageTips: [
+      "Replace [item] with your specific product name and description",
+      "Mention the angle you want (front, 3/4 view, top-down)",
+      "Specify if you need lifestyle context or pure white background",
+      "Add product dimensions for proper scaling reference"
+    ],
+    bestFor: ["Amazon listings", "Shopify stores", "Social commerce", "Product catalogs"],
+    aiTools: ["DALL-E 3", "Midjourney", "Flair AI", "PhotoRoom"]
+  },
+  {
+    id: "youtube-thumbnail",
+    title: "YouTube Thumbnail",
+    prompt: "Design an eye-catching YouTube thumbnail for a video about [topic]. Use bold text, expressive face/reaction, bright colors, and create curiosity gap. Size: 1280x720 pixels. Include contrasting colors, large readable text (3-5 words max), and a compelling visual element that makes viewers want to click.",
+    category: "Social Media",
+    categorySlug: "social-media",
+    isHot: false,
+    usageTips: [
+      "Replace [topic] with your video subject",
+      "Specify your channel's color scheme for brand consistency",
+      "Mention if you want a face placeholder or specific expression",
+      "Add the exact text you want on the thumbnail"
+    ],
+    bestFor: ["YouTube creators", "Video marketers", "Course creators", "Vloggers"],
+    aiTools: ["Canva AI", "Midjourney", "DALL-E 3", "Thumbnail.ai"]
+  },
+  {
+    id: "holi-celebration-post",
+    title: "Holi Celebration Post",
+    prompt: "Create a vibrant Holi festival image with colorful powder explosions, people celebrating, and joyful atmosphere. Include traditional elements like pichkari, gulal colors, and festive decorations. The image should capture the essence of the festival of colors with dynamic movement and happiness.",
+    category: "Festival",
+    categorySlug: "festival",
+    isHot: false,
+    usageTips: [
+      "Specify if you want people in the image or just abstract colors",
+      "Mention specific colors you want prominently featured",
+      "Add 'text space' if you need area for custom messages",
+      "Request 'corporate style' for professional Holi greetings"
+    ],
+    bestFor: ["Social media posts", "WhatsApp status", "Email greetings", "Marketing campaigns"],
+    aiTools: ["Midjourney", "DALL-E 3", "Canva AI", "Adobe Firefly"]
+  },
+  {
+    id: "logo-design-concept",
+    title: "Logo Design Concept",
+    prompt: "Design a modern, minimalist logo for [brand name] in the [industry] industry. The logo should be versatile, memorable, and work well in both color and black & white. Include a unique symbol or icon that represents the brand values. Style: clean lines, balanced proportions, timeless design.",
+    category: "Art & Design",
+    categorySlug: "art-design",
+    isHot: true,
+    usageTips: [
+      "Replace [brand name] and [industry] with your specifics",
+      "Describe your brand personality (professional, playful, luxury, etc.)",
+      "Mention any colors you want to incorporate or avoid",
+      "Specify if you need just icon, wordmark, or combination"
+    ],
+    bestFor: ["Startups", "Rebranding projects", "Personal brands", "Small businesses"],
+    aiTools: ["Midjourney", "DALL-E 3", "Looka", "Brandmark"]
+  },
+  {
+    id: "linkedin-post-writer",
+    title: "LinkedIn Post Writer",
+    prompt: "Write a compelling LinkedIn post about [topic] that showcases thought leadership. Start with a hook, share a personal story or insight, provide actionable value, and end with a question to drive engagement. Use short paragraphs, line breaks for readability, and include relevant emojis sparingly. Keep it between 150-300 words.",
+    category: "Social Media",
+    categorySlug: "social-media",
+    isHot: true,
+    usageTips: [
+      "Replace [topic] with your expertise area or insight",
+      "Add your job title/industry for context",
+      "Mention your target audience (CEOs, marketers, developers, etc.)",
+      "Specify the tone: professional, casual, inspirational"
+    ],
+    bestFor: ["Personal branding", "B2B marketing", "Career growth", "Thought leadership"],
+    aiTools: ["ChatGPT", "Claude", "Jasper", "Copy.ai"]
+  },
+  {
+    id: "eid-mubarak-design",
+    title: "Eid Mubarak Design",
+    prompt: "Create an elegant Eid Mubarak greeting design with Islamic geometric patterns, crescent moon, mosque silhouette, and stars. Use a color palette of gold, deep green, and navy blue. Include beautiful Arabic calligraphy for 'Eid Mubarak' with English translation. The design should be respectful, culturally authentic, and visually stunning.",
+    category: "Festival",
+    categorySlug: "festival",
+    isHot: false,
+    usageTips: [
+      "Specify if it's for Eid ul-Fitr or Eid ul-Adha",
+      "Mention if you need space for personalized messages",
+      "Add your brand colors for corporate greetings",
+      "Request 'animated version' if you need for digital use"
+    ],
+    bestFor: ["Social media", "Email greetings", "WhatsApp messages", "Corporate communications"],
+    aiTools: ["Midjourney", "DALL-E 3", "Canva AI", "Adobe Firefly"]
+  },
+  {
+    id: "chatgpt-code-assistant",
+    title: "ChatGPT Code Assistant",
+    prompt: "You are an expert programmer. Help me write clean, efficient, and well-documented code for [task]. Explain your approach step by step, include comments in the code, handle edge cases, and follow best practices. If there are multiple approaches, explain the trade-offs. Language: [programming language].",
+    category: "Trending AI",
+    categorySlug: "trending-ai",
+    isHot: true,
+    usageTips: [
+      "Replace [task] with specific coding requirement",
+      "Replace [programming language] with your preferred language",
+      "Add context about your skill level for appropriate explanations",
+      "Mention any frameworks or libraries you're using"
+    ],
+    bestFor: ["Developers", "Students", "Code debugging", "Learning programming"],
+    aiTools: ["ChatGPT", "Claude", "GitHub Copilot", "Cursor"]
+  },
+  {
+    id: "business-pitch-deck",
+    title: "Business Pitch Deck",
+    prompt: "Create content for a compelling pitch deck for [business idea]. Include sections for: Problem statement, Solution, Market size, Business model, Competitive advantage, Team, Financial projections, and Call to action. Make it concise, data-driven, and investor-ready. Each slide should have a clear headline and 3-4 bullet points maximum.",
+    category: "Business Ideas",
+    categorySlug: "business-ideas",
+    isHot: true,
+    usageTips: [
+      "Replace [business idea] with your startup concept",
+      "Add your industry and target market for relevance",
+      "Mention if you have any traction or metrics to include",
+      "Specify the funding stage (seed, Series A, etc.)"
+    ],
+    bestFor: ["Startups", "Entrepreneurs", "Investor meetings", "Business competitions"],
+    aiTools: ["ChatGPT", "Claude", "Tome", "Gamma"]
+  }
+];
+
+// --- Components ---
+
+const CategoryBadge = ({ category }) => {
+  const getStyle = (cat) => {
+    switch(cat.toLowerCase()) {
+      case 'photo editing': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'social media': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'festival': return 'bg-pink-100 text-pink-700 border-pink-200';
+      case 'trending ai': return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'art & design': return 'bg-rose-100 text-rose-700 border-rose-200';
+      case 'business ideas': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getIcon = (cat) => {
+     switch(cat.toLowerCase()) {
+      case 'photo editing': return <Camera size={12} className="mr-1" />;
+      case 'social media': return <MessageSquare size={12} className="mr-1" />;
+      case 'festival': return <Sparkles size={12} className="mr-1" />;
+      case 'trending ai': return <Zap size={12} className="mr-1" />;
+      case 'art & design': return <Palette size={12} className="mr-1" />;
+      case 'business ideas': return <Briefcase size={12} className="mr-1" />;
+      default: return <Tag size={12} className="mr-1" />;
+    }
+  };
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStyle(category)}`}>
+      {getIcon(category)}
+      {category}
+    </span>
+  );
+};
+
+const ToolBadge = ({ tool }) => (
+  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600 mr-2 mb-2">
+    {tool}
+  </span>
+);
+
+const DetailModal = ({ prompt, onClose, isAdmin, onImageUpload }) => {
+  const [copied, setCopied] = useState(false);
+  const fileInputRef = useRef(null);
+
+  if (!prompt) return null;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(prompt.prompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col">
+        {/* Header */}
+        <div className="relative group">
+          {prompt.image ? (
+             <div className="h-48 w-full relative">
+               <img 
+                 src={prompt.image} 
+                 alt={prompt.title} 
+                 className="w-full h-full object-cover rounded-t-2xl"
+               />
+               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-t-2xl" />
+             </div>
+          ) : (
+             <div className="h-32 bg-slate-100 flex items-center justify-center rounded-t-2xl border-b border-gray-100">
+                <div className="text-slate-400 flex flex-col items-center">
+                   <ImageIcon size={32} className="mb-2 opacity-50" />
+                   <span className="text-sm">No Preview Image</span>
+                </div>
+             </div>
+          )}
+
+          {/* Admin Upload Overlay */}
+          {isAdmin && (
+            <div className={`absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity duration-200 ${prompt.image ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
+              <button 
+                onClick={handleUploadClick}
+                className="bg-white text-slate-900 px-4 py-2 rounded-full font-medium shadow-lg hover:bg-slate-50 transition-transform hover:scale-105 flex items-center gap-2"
+              >
+                <Camera size={18} />
+                {prompt.image ? 'Change Image' : 'Upload Image'}
+              </button>
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                className="hidden" 
+                accept="image/*"
+                onChange={(e) => onImageUpload(prompt.id, e.target.files[0])}
+              />
+            </div>
+          )}
+          
+          <div className={`${prompt.image ? 'absolute bottom-0 left-0 right-0 p-6 text-white' : 'p-6 border-b border-gray-100'}`}>
+             <div className="flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  {!prompt.image && <CategoryBadge category={prompt.category} />}
+                  {prompt.image && (
+                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border bg-white/20 backdrop-blur-md text-white border-white/30">
+                       <Tag size={12} className="mr-1" />
+                       {prompt.category}
+                     </span>
+                  )}
+                  {prompt.isHot && (
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${prompt.image ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-600 border border-orange-200'}`}>
+                      <Zap size={10} className="mr-1 fill-current" />
+                      HOT
+                    </span>
+                  )}
+                </div>
+                <h2 className={`text-2xl font-bold ${prompt.image ? 'text-white' : 'text-gray-900'}`}>{prompt.title}</h2>
+              </div>
+              
+              <button 
+                onClick={onClose}
+                className={`p-2 rounded-full transition-colors z-10 ${prompt.image ? 'bg-black/20 hover:bg-black/40 text-white absolute top-4 right-4' : 'hover:bg-gray-100 text-gray-500'}`}
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-8">
+          {/* Main Prompt Box */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">The Prompt</h3>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 relative group">
+              <p className="text-lg text-slate-800 leading-relaxed font-medium">
+                {prompt.prompt}
+              </p>
+              <div className="mt-4 flex justify-end">
+                <button 
+                  onClick={handleCopy}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    copied 
+                      ? 'bg-green-600 text-white shadow-lg scale-105' 
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg'
+                  }`}
+                >
+                  {copied ? <Check size={18} /> : <Copy size={18} />}
+                  {copied ? 'Copied!' : 'Copy Prompt'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Tips */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <Sparkles size={16} className="text-amber-500" /> Usage Tips
+              </h3>
+              <ul className="space-y-2">
+                {prompt.usageTips.map((tip, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-gray-600 text-sm bg-amber-50/50 p-2 rounded-lg">
+                    <span className="block mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Best For */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <ThumbsUp size={16} className="text-blue-500" /> Best For
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {prompt.bestFor.map((item, idx) => (
+                  <span key={idx} className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-medium border border-blue-100">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Tools */}
+         
